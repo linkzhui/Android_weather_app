@@ -40,12 +40,10 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -161,7 +159,7 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
 //        }
     }
 
-    private JSONObject getJSON(String city) throws MalformedURLException {
+    private JSONObject getJSON_weather(String city) throws MalformedURLException {
         String[] city_name = city.split(" ");
         StringBuilder sb = new StringBuilder();
         String Prefix = "";
@@ -199,40 +197,77 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
             }
 
             //update the weather
-            update_weather(city,data);
+            //update_weather(city,data);
 
-            //update the forecast data
-            url = new URL(String.format(OPEN_WEATHER_MAP_API_FORECAST, sb.toString(),unit));
-            connection = (HttpURLConnection)url.openConnection();
-            reader = new BufferedReader(
-                    new InputStreamReader(connection.getInputStream()));
-            json = new StringBuffer(4096);
-            tmp="";
-            while((tmp=reader.readLine())!=null)
-                json.append(tmp).append("\n");
-            reader.close();
-            data = new JSONObject(json.toString());
-            if(data.getInt("cod") != 200){
-                return null;
-            }
-            update_forecast(data);
+//            //update the forecast data
+//            url = new URL(String.format(OPEN_WEATHER_MAP_API_FORECAST, sb.toString(),unit));
+//            connection = (HttpURLConnection)url.openConnection();
+//            reader = new BufferedReader(
+//                    new InputStreamReader(connection.getInputStream()));
+//            json = new StringBuffer(10000);
+//            tmp="";
+//            while((tmp=reader.readLine())!=null)
+//                json.append(tmp).append("\n");
+//            reader.close();
+//            data = new JSONObject(json.toString());
+//            if(data.getInt("cod") != 200){
+//                return null;
+//            }
+//            update_forecast(data);
             return data;
         }catch(Exception e){
             return null;
         }
     }
 
+    private JSONObject getJSON_forecast(String city) throws IOException, JSONException {
+        String[] city_name = city.split(" ");
+        StringBuilder sb = new StringBuilder();
+        String Prefix = "";
+        for(String element:city_name)
+        {
+            sb.append(Prefix);
+            sb.append(element);
+            Prefix = "_";
+        }
+        final String OPEN_WEATHER_MAP_API_FORECAST =
+                "http://api.openweathermap.org/data/2.5/forecast?q=%s&units=%s&APPID=56b7d028c2024a76ca8be575a4123b82";
+        //update the forecast data
+        URL url = new URL(String.format(OPEN_WEATHER_MAP_API_FORECAST, sb.toString(),unit));
+        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(connection.getInputStream()));
+        StringBuffer json = new StringBuffer(10000);
+        String tmp="";
+        while((tmp=reader.readLine())!=null)
+            json.append(tmp).append("\n");
+        reader.close();
+        JSONObject data = new JSONObject(json.toString());
+        if(data.getInt("cod") != 200){
+            return null;
+        }
+        return data;
+    }
+
 
 
     private class LoadCurrentWeatherAsync extends AsyncTask<String, Void, Void>
     {
-
+        JSONObject weather;
+        JSONObject forecast;
+        String city;
         @Override
         protected Void doInBackground(String... city) {
 
             try {
-                getJSON(city[0]);
+                this.city = city[0];
+                weather = getJSON_weather(this.city);
+                forecast = getJSON_forecast(this.city);
             } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
                 e.printStackTrace();
             }
             return null;
@@ -241,12 +276,18 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
         @Override
         protected void onPostExecute(Void voids) {
             Log.i("", "onPostExecute(Result result) called");
+            try {
+                update_weather(this.city,weather);
+                update_forecast(this.city,forecast);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
             adapter.notifyDataSetChanged();
         }
 
     }
 
-    private void update_forecast(JSONObject json) throws JSONException {
+    private void update_forecast(String city, JSONObject json) throws JSONException {
         List<Temp_Weather> temp_list = new ArrayList<>();
         JSONArray list = json.getJSONArray("list");
         for(int i = 0 ;i<8;i++)
@@ -257,14 +298,12 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
             int max_temp= temp_object.getInt("temp_max");
             String weather_status = temp_array.getString("main").toString();
             temp_list.add(new Temp_Weather(min_temp,max_temp,weather_status));
-            //Log.i("update_forecast","min: "+min_temp+" max: "+max_temp+" weather: "+weather_status);
+            Log.i("update_forecast","min: "+min_temp+" max: "+max_temp+" weather: "+weather_status);
         }
-
         CityData cityData = new CityData();
         cityData.addForecast(temp_list);
-
         List<Temp_Weather> temp_list_forcast = new ArrayList<>();
-        for(int i = 3 ;i<40;i+=8)
+        for(int i = 1 ;i<=34;i+=7)
         {
             JSONObject temp_object = list.getJSONObject(i).getJSONObject("main");
             JSONObject temp_array = list.getJSONObject(i).getJSONArray("weather").getJSONObject(0);
@@ -275,9 +314,11 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
             Temp_Weather new_temp = new Temp_Weather(min_temp,max_temp,weather_status);
             new_temp.setDate(date);
             temp_list_forcast.add(new_temp);
-            Log.i("update_forecast","min: "+new_temp.min_temp+" max: "+new_temp.max_temp+" weather: "+new_temp.weather+" date: "+new_temp.date);
+            Log.i("update_forecast",i+" "+"min: "+new_temp.min_temp+" max: "+new_temp.max_temp+" weather: "+new_temp.weather+" date: "+new_temp.date);
         }
-        cityData.addNextForecast(temp_list_forcast);
+        boolean result = cityData.addNextForecast(temp_list_forcast);
+        Log.e("add next forecast result",CityData.next_forecast.size()+"");
+
     }
 
     private void update_weather(String city,JSONObject jsonObject) throws JSONException {
