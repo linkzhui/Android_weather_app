@@ -1,6 +1,7 @@
 package com.example.raymon.android_weather;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -30,6 +31,7 @@ public class CityAdapter extends BaseAdapter {
 
     @Override
     public Object getItem(int i) {
+
         return city_list.get(i);
     }
 

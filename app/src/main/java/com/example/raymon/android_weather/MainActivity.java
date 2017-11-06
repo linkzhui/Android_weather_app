@@ -264,7 +264,7 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
         cityData.addForecast(temp_list);
 
         List<Temp_Weather> temp_list_forcast = new ArrayList<>();
-        for(int i = 3 ;i<40;i+=8)
+        for(int i = 2 ;i<list.length();i+=7)
         {
             JSONObject temp_object = list.getJSONObject(i).getJSONObject("main");
             JSONObject temp_array = list.getJSONObject(i).getJSONArray("weather").getJSONObject(0);

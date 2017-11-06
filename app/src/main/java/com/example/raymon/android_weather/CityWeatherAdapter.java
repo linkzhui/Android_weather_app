@@ -28,6 +28,7 @@ public class CityWeatherAdapter extends FragmentStatePagerAdapter {
 
     @Override
     public int getCount() {
+        Log.e("get forecast size",CityData.next_forecast.size()+"");
         return city.size();
     }
 

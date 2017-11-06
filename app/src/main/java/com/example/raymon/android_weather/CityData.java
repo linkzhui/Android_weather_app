@@ -17,20 +17,13 @@ import java.util.List;
 public class CityData {
 
     public static List<City> city_list = new ArrayList<>();
+
     public static HashMap<String,Integer> map = new HashMap<>();
     public static String current_city = "";
     public static List<List<Temp_Weather>> forecast = new ArrayList<>();
     public static List<List<Temp_Weather>> next_forecast = new ArrayList<>();
+
     public static List<City> getData(){
-//        List<City> city_list = new LinkedList<>();
-//        Log.e("City Data","add the data to city list");
-//        for(int i =0;i<10;i++){
-//            City city = new City("San Jose",""+i,"night");
-////            DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm:ss");
-////            Date dateobj = new Date();
-////            city.setDay(df.format(dateobj));
-//            city_list.add(city);
-//        }
         return city_list;
     }
 
@@ -61,13 +54,16 @@ public class CityData {
         return true;
     }
 
+
+
     public void addForecast(List<Temp_Weather> nestList)
     {
         forecast.add(nestList);
     }
 
-    public void addNextForecast(List<Temp_Weather> nestList){
-        next_forecast.add(nestList);
+    public boolean addNextForecast(List<Temp_Weather> nestList){
+
+        return next_forecast.add(nestList);
     }
     public boolean remove(String city_name)
     {

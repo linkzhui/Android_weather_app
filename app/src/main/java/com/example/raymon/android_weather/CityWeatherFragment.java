@@ -112,7 +112,7 @@ public class CityWeatherFragment extends Fragment {
 //            current_city.setText("this is current city");
 //        }
         city_name.setText(city.getCity());
-        Log.e("city weather fragment on create cycle",city.getTemperature());
+//        Log.e("city weather fragment on create cycle",city.getTemperature());
         int index = CityData.map.get(city.getCity());
         String Unit = city.getUnit()=="metric"? " \u2103":" \u2109";
         city_temperature.setText(city.getTemperature().toString()+Unit);
