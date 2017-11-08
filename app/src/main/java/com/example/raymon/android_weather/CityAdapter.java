@@ -62,11 +62,16 @@ public class CityAdapter extends BaseAdapter {
 
         City r = city_list.get(position);
         CityData city_data = new CityData();
-        if(city_data.currentCity(r.getCity()))
+        if(city_data.isThisCurrentCity(r.getCity()))
         {
             TextView current_city = convertView.findViewById(
                     R.id.current_city);
             current_city.setText("this is current city");
+        }
+        else{
+            TextView current_city = convertView.findViewById(
+                    R.id.current_city);
+            current_city.setText("");
         }
         city_name.setText(r.getCity());
         String Unit = r.getUnit()=="metric"? " \u2103":" \u2109";

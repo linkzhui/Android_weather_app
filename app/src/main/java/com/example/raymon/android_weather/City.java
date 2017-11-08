@@ -11,6 +11,28 @@ public class City {
     private String update_time;
     private String temperature;
     private String temp_unit;
+    private String lat;
+    private String log;
+
+    public void setLat(String lat)
+    {
+        this.lat = lat;
+    }
+
+    public void setLog(String log)
+    {
+        this.log = log;
+    }
+
+    public String getLat()
+    {
+        return lat;
+    }
+
+    public String getLog()
+    {
+        return log;
+    }
 
     public City(String city)
     {

@@ -28,9 +28,9 @@ public class CityData {
     }
 
 
-    public boolean currentCity(String city_name){
+    public boolean isThisCurrentCity(String city_name){
 
-        return current_city==city_name;
+        return current_city.equals(city_name);
     }
 
     public void setCurrent_city(String city_name)
