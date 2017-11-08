@@ -11,7 +11,6 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -40,28 +39,17 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.text.DateFormat;
 import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements PlaceSelectionListener, LocationListener {
-    String[] week = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
-    private FragmentManager fragmentManager;
-    private CityListFragment city_list;
     private LocationManager locationManager;
     private String provider;
-    private CityAdapter adapter;
+    private static CityAdapter adapter;
     public static String unit = "metric";  //For temperature in Fahrenheit use units=imperial   For temperature in Celsius use units=metric
-    private String Now_date;
-    Calendar rightNow = Calendar.getInstance();
-    SimpleDateFormat df = new SimpleDateFormat("EEE, yyyy-MM-dd");
-    Calendar c = Calendar.getInstance();
     private String current_unit = "metric";
 
     @Override
@@ -69,8 +57,7 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Log.e("life cycle test", "onCreate stage");
-        Now_date = df.format(c.getTime());
-        ListView listView = (ListView) findViewById(R.id.city_list_view);
+        ListView listView = findViewById(R.id.city_list_view);
         adapter = new CityAdapter(this);
         listView.setAdapter(adapter);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -107,6 +94,7 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
     public Location getLocation() {
         Location location = null;
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        assert locationManager != null;
         boolean isNetworkEnabled = locationManager
                 .isProviderEnabled(LocationManager.NETWORK_PROVIDER);
         provider = LocationManager.NETWORK_PROVIDER;
@@ -157,7 +145,8 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
 //        }
     }
 
-    private JSONObject getJSON(String city) throws MalformedURLException {
+    private static JSONObject getJSON(String city) throws MalformedURLException {
+        Log.e("current in getJSON life cycle",city);
         String[] city_name = city.split(" ");
         StringBuilder sb = new StringBuilder();
         String Prefix = "";
@@ -167,43 +156,60 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
             sb.append(element);
             Prefix = "_";
         }
-        final String OPEN_WEATHER_MAP_API =
-                "http://api.openweathermap.org/data/2.5/weather?q=%s&units=%s&APPID=56b7d028c2024a76ca8be575a4123b82";
         final String OPEN_WEATHER_MAP_API_FORECAST =
                 "http://api.openweathermap.org/data/2.5/forecast?q=%s&units=%s&APPID=56b7d028c2024a76ca8be575a4123b82";
         final String timezonedb_api  = "http://api.timezonedb.com/v2/get-time-zone?key=059VHEU07NYS&format=json&by=position&lat=37.34&lng=-121.89";
         try {
-            URL url = new URL(String.format(OPEN_WEATHER_MAP_API, sb.toString(),unit));
-            HttpURLConnection connection =
-                    (HttpURLConnection)url.openConnection();
+//            URL url = new URL(String.format(OPEN_WEATHER_MAP_API, sb.toString(),unit));
+//            HttpURLConnection connection =
+//                    (HttpURLConnection)url.openConnection();
+//
+//            BufferedReader reader = new BufferedReader(
+//                    new InputStreamReader(connection.getInputStream()));
+//
+//            StringBuffer json = new StringBuffer(1024);
+//            String tmp="";
+//            while((tmp=reader.readLine())!=null)
+//                json.append(tmp).append("\n");
+//            reader.close();
+//
+//            //Log.i("Received Json Object",json.toString());
+//            JSONObject data = new JSONObject(json.toString());
+//
+//            // This value will be 404 if the request was not
+//            // successful
+//            if(data.getInt("cod") != 200){
+//                return null;
+//            }
+//
+//            //update the weather
+//            update_weather(city,data);
 
+            //update the forecast data
+            URL url = new URL(String.format(OPEN_WEATHER_MAP_API_FORECAST, sb.toString(),unit));
+            HttpURLConnection connection = (HttpURLConnection)url.openConnection();
             BufferedReader reader = new BufferedReader(
                     new InputStreamReader(connection.getInputStream()));
-
-            StringBuffer json = new StringBuffer(1024);
+            StringBuffer json = new StringBuffer(2048);
             String tmp="";
             while((tmp=reader.readLine())!=null)
                 json.append(tmp).append("\n");
             reader.close();
-
-            //Log.i("Received Json Object",json.toString());
             JSONObject data = new JSONObject(json.toString());
+//            if(data.getInt("cod") != 200){
+//                return null;
+//            }
+            Log.e("jsonobject data",data.toString());
+            update_forecast(city,data);
 
-            // This value will be 404 if the request was not
-            // successful
-            if(data.getInt("cod") != 200){
-                return null;
-            }
-
-            //update the weather
-            update_weather(city,data);
-
+            Log.e("after the forecast","here");
             int index = CityData.map.get(city);
             City cur_city = CityData.city_list.get(index);
             String lat = cur_city.getLat();
             String log = cur_city.getLog();
             //update_time
-            url = new URL(String.format("http://api.timezonedb.com/v2/get-time-zone?key=059VHEU07NYS&format=json&by=position&lat=%s&lng=%s",lat,log));
+
+            url = new URL(String.format(timezonedb_api,lat,log));
 //            String new_ur = String.format(timezonedb_api,lat,log);
 //            Log.e("new url",url.toString());
             //url = new URL(timezonedb_api);
@@ -215,9 +221,9 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
                     new InputStreamReader(connection.getInputStream()));
 
             json = new StringBuffer(512);
-            tmp="";
-            while((tmp=reader.readLine())!=null)
-                json.append(tmp).append("\n");
+            String time = "";
+            while((time=reader.readLine())!=null)
+                json.append(time).append("\n");
             reader.close();
 
             //Log.i("Received Json Object",json.toString());
@@ -237,83 +243,24 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
             Log.e("current date","this is "+date);
             cur_city.setDay(date);
 
-            //update the forecast data
-            url = new URL(String.format(OPEN_WEATHER_MAP_API_FORECAST, sb.toString(),unit));
-            connection = (HttpURLConnection)url.openConnection();
-            reader = new BufferedReader(
-                    new InputStreamReader(connection.getInputStream()));
-            json = new StringBuffer(4096);
-            tmp="";
-            while((tmp=reader.readLine())!=null)
-                json.append(tmp).append("\n");
-            reader.close();
-            data = new JSONObject(json.toString());
-            if(data.getInt("cod") != 200){
-                return null;
-            }
-            update_forecast(data);
+
             return data;
         }catch(Exception e){
             return null;
         }
     }
 
-//    private void updateTime(String city) throws MalformedURLException {
-//        final String timezonedb_api  = "http://api.timezonedb.com/v2/get-time-zone?key=059VHEU07NYS&format=json&by=position&lat=%s&lng=%s";
-//        try{
-//            Log.e("current stage","update time");
-//            int index = CityData.map.get(city);
-//            City cur_city = CityData.city_list.get(index);
-//            String log = cur_city.getLog();
-//            String lat = cur_city.getLat();
-//            URL url = new URL(String.format(timezonedb_api,lat,log));
-//            HttpURLConnection connection =
-//                    (HttpURLConnection)url.openConnection();
-//
-//            BufferedReader reader = new BufferedReader(
-//                    new InputStreamReader(connection.getInputStream()));
-//
-//            StringBuffer json = new StringBuffer(1024);
-//            String tmp="";
-//            while((tmp=reader.readLine())!=null)
-//                json.append(tmp).append("\n");
-//            reader.close();
-//
-//            //Log.i("Received Json Object",json.toString());
-//            JSONObject data = new JSONObject(json.toString());
-//
-//            // This value will be 404 if the request was not
-//            // successful
-//            if(data.getString("status")=="OK")
-//            {
-//                Log.e("the server repsonse","OK");
-//            }
-//            else{
-//                Log.e("the server repsonse","FAIL");
-//            }
-//            String date = data.getString("formatted");
-//            Log.e("current date","this is "+date);
-//            cur_city.setDay(date);
-//
-//        }catch (JSONException e) {
-//            e.printStackTrace();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//
-//    }
 
 
-    private class LoadCurrentWeatherAsync extends AsyncTask<String, Void, Void>
+    private static class LoadCurrentWeatherAsync extends AsyncTask<String, Void, Void>
     {
 
         @Override
         protected Void doInBackground(String... city) {
-            String cur_city;
             try {
+                Log.e("begin to get json object","in asynctask cycle");
                 getJSON(city[0]);
-//                cur_city = city[0];
-//                updateTime(cur_city);
+//
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             }
@@ -328,22 +275,32 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
 
     }
 
-    private void update_forecast(JSONObject json) throws JSONException {
+    private static void update_forecast(String city,JSONObject json) throws JSONException {
+        Log.e("begin to update the forecast","begin");
         List<Temp_Weather> temp_list = new ArrayList<>();
         JSONArray list = json.getJSONArray("list");
+        List<City> city_list = CityData.city_list;
+        HashMap<String,Integer> map = CityData.map;
+        Integer index= map.get(city);
+        Log.i("city name",city);
+
+        CityData cityData = new CityData();
+
+
+
         for(int i = 0 ;i<8;i++)
         {
             JSONObject temp_object = list.getJSONObject(i).getJSONObject("main");
             JSONObject temp_array = list.getJSONObject(i).getJSONArray("weather").getJSONObject(0);
             int min_temp  = temp_object.getInt("temp_min");
             int max_temp= temp_object.getInt("temp_max");
-            String weather_status = temp_array.getString("main").toString();
+            String weather_status = temp_array.getString("main");
             temp_list.add(new Temp_Weather(min_temp,max_temp,weather_status));
             //Log.i("update_forecast","min: "+min_temp+" max: "+max_temp+" weather: "+weather_status);
         }
 
         //first
-        CityData cityData = new CityData();
+
         cityData.addForecast(temp_list);
 
         List<Temp_Weather> temp_list_forcast = new ArrayList<>();
@@ -353,14 +310,41 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
             JSONObject temp_array = list.getJSONObject(i).getJSONArray("weather").getJSONObject(0);
             int min_temp  = temp_object.getInt("temp_min");
             int max_temp= temp_object.getInt("temp_max");
-            String weather_status = temp_array.getString("main").toString();
-            String date = list.getJSONObject(i).getString("dt_txt").toString().split(" ")[0];
+            String weather_status = temp_array.getString("main");
+            String date = list.getJSONObject(i).getString("dt_txt").split(" ")[0];
             Temp_Weather new_temp = new Temp_Weather(min_temp,max_temp,weather_status);
             new_temp.setDate(date);
             temp_list_forcast.add(new_temp);
             Log.i("update_forecast","min: "+new_temp.min_temp+" max: "+new_temp.max_temp+" weather: "+new_temp.weather+" date: "+new_temp.date);
         }
         cityData.addNextForecast(temp_list_forcast);
+
+        City cur = city_list.get(index);
+        String lat = json.getJSONObject("city").getJSONObject("coord").getString("lat");
+        if(lat!=null)
+        {
+            Log.e("Latitude",lat);
+        }
+        else{
+            Log.e("Latitude","not founded");
+        }
+
+        cur.setLat(lat);
+        String log = json.getJSONObject("city").getJSONObject("coord").getString("lon");
+        if(log!=null)
+        {
+            Log.e("log",log);
+        }
+        else{
+            Log.e("log","not founded");
+        }
+        cur.setLog(log);
+        int cur_temp = (list.getJSONObject(3).getJSONObject("main").getInt("temp_min")+list.getJSONObject(3).getJSONObject("main").getInt("temp_max"))/2;
+        String cur_weather_status = list.getJSONObject(3).getJSONArray("weather").getJSONObject(0).getString("main");
+        Log.e("current weather status",cur_weather_status);
+        Log.e("current temp",cur_temp+"");
+        cur.setTemperature(cur_temp+"");
+        cur.setWeatherStatus(cur_weather_status);
     }
 
     private void update_weather(String city,JSONObject jsonObject) throws JSONException, MalformedURLException {
@@ -369,15 +353,15 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
         Integer index= map.get(city);
         Log.i("city name",city);
         City cur = city_list.get(index);
-        cur.setTemperature(jsonObject.getJSONObject("main").getString("temp").toString());
+        cur.setTemperature(jsonObject.getJSONObject("main").getString("temp"));
         cur.setUnit(unit);
         current_unit = unit;
 //        cur.setDay(Now_date);
-        cur.setWeatherStatus(jsonObject.getJSONArray("weather").getJSONObject(0).getString("main").toString());
-        String lat = jsonObject.getJSONObject("coord").getString("lat").toString();
+        cur.setWeatherStatus(jsonObject.getJSONArray("weather").getJSONObject(0).getString("main"));
+        String lat = jsonObject.getJSONObject("coord").getString("lat");
 //        Log.e("Latitude",lat);
         cur.setLat(lat);
-        String log = jsonObject.getJSONObject("coord").getString("lon").toString();
+        String log = jsonObject.getJSONObject("coord").getString("lon");
 //        Log.e("Logitude",log);
         cur.setLog(log);
     }
@@ -404,12 +388,11 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
         Log.e("Life cycle test", "We are at onResume()");
         if(CityData.city_list!=null && CityData.city_list.size()>0)
         {
-            if(current_unit!=unit)
+            if(!current_unit.equals(unit))
             {
                 Log.e("main activity unit",current_unit);
                 Log.e("current unit",unit);
-                boolean result;
-                if(current_unit == "metric")
+                if(current_unit.equals("metric"))
                 {
                     current_unit = "imperial";
                     adapter.notifyDataSetChanged();
@@ -430,7 +413,6 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
 
         if(v.getId()==R.id.city_list_view)
         {
-            AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo)menuInfo;
             menu.add("Delete");
 
         }
@@ -452,7 +434,7 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
         return false;
     }
 
-    private boolean changeUnit(String unit,Integer different)
+    private void changeUnit(String unit, Integer different)
     {
         if(CityData.city_list!=null&&CityData.city_list.size()>0)
         {
@@ -476,9 +458,7 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
                 }
 
             }
-            return true;
         }
-        return false;
     }
     @Override
     protected void onPause() {
@@ -518,21 +498,21 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
         switch (item.getItemId())
         {
             case R.id.setting_C:
-                if(unit == "metric")
+                if(unit.equals("metric"))
                 {
                     Toast.makeText(this, "The Unit is already Celsius", Toast.LENGTH_SHORT).show();
                 }
-                else if(unit == "imperial"){
+                else if(unit.equals("imperial")){
                     unit = "metric";
                     current_unit = unit;
                     changeUnit(unit,32);
                     adapter.notifyDataSetChanged();
-                    Toast.makeText(this, "Change to Celsius (C) successful!", Toast.LENGTH_SHORT);
+                    Toast.makeText(this, "Change to Celsius (C) successful!", Toast.LENGTH_SHORT).show();
                 }
 
                 return true;
             case R.id.setting_F:
-                if(unit == "metric")
+                if(unit.equals("metric"))
                 {
                     unit = "imperial";
                     current_unit = unit;
@@ -565,11 +545,11 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
                 builder.append(addressStr);
                 builder.append(" ");
             }
-            String fnialAddress = builder.toString(); //This is the complete address.
 
 //            Log.e("latituteField",String.valueOf(lat));
 //            Log.e("longitudeField",String.valueOf(lng));
             String current_city = parseAddress(address.get(0).getAddressLine(1));
+            Log.e("current city is:",current_city);
             CityData city_data = new CityData();
             city_data.setCurrent_city(current_city);
             if(!city_data.exist(current_city)){
@@ -579,8 +559,6 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
 
         } catch (IOException e) {
             // Handle IOException
-        } catch (NullPointerException e) {
-            // Handle NullPointerException
         }
     }
 
